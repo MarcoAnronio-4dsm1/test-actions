@@ -44,7 +44,6 @@ jobs:
 
           ### 📌 Información General
           - **Autor:** ${{ steps.git-info.outputs.author }}
-          - **Fecha:** $(date +'%Y-%m-%d %H:%M:%S UTC')
           - **Evento:** `${{ github.event_name }}`
           - **Rama:** `${{ github.head_ref || github.ref_name }}`
           - **Mensaje del último commit:** `${{ steps.git-info.outputs.msg }}`
@@ -55,9 +54,6 @@ jobs:
           | Commits procesados | `${{ steps.git-info.outputs.commits }}` |
           | Archivos modificados | `${{ steps.git-info.outputs.files }}` |
 
-          ### 📝 Lista de Archivos Alterado
-          
-          $(git diff --name-only HEAD^ HEAD 2>/dev/null || echo "No se detectaron archivos individuales")
 
           
           *Reporte generado automáticamente por GitHub Actions.*
