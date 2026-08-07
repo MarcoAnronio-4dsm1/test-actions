@@ -1,0 +1,79 @@
+name: Reporte de Trabajo Entregado
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches:
+      - main
+      - dev
+
+jobs:
+  generate-report:
+    name: Generar Reporte Markdown
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Descargar código fuente
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Obtener datos del commit y cambios
+        id: git-info
+        run: |
+          COMMITS_COUNT=$(git rev-list --count HEAD^..HEAD 2>/dev/null || echo "1")
+          FILES_CHANGED=$(git diff --name-only HEAD^ HEAD 2>/dev/null | wc -l | xargs)
+          AUTHOR=$(git log -1 --format='%an <%ae>')
+          COMMIT_MSG=$(git log -1 --format='%s')
+          
+          echo "commits=$COMMITS_COUNT" >> $GITHUB_OUTPUT
+          echo "files=$FILES_CHANGED" >> $GITHUB_OUTPUT
+          echo "author=$AUTHOR" >> $GITHUB_OUTPUT
+          echo "msg=$COMMIT_MSG" >> $GITHUB_OUTPUT
+
+      - name: Construir y Publicar Reporte Markdown
+        id: build-report
+        run: |
+          # Crear contenido Markdown
+          cat << 'EOF' > report.md
+          ## 🚀 Reporte de Trabajo Entregado
+
+          ### 📌 Información General
+          - **Autor:** ${{ steps.git-info.outputs.author }}
+          - **Evento:** `${{ github.event_name }}`
+          - **Rama:** `${{ github.head_ref || github.ref_name }}`
+          - **Mensaje del último commit:** `${{ steps.git-info.outputs.msg }}`
+
+          ### 📊 Métricas del Commit / PR
+          | Métrica | Cantidad |
+          | :--- | :--- |
+          | Commits procesados | `${{ steps.git-info.outputs.commits }}` |
+          | Archivos modificados | `${{ steps.git-info.outputs.files }}` |
+
+
+          
+          *Reporte generado automáticamente por GitHub Actions.*
+          EOF
+
+
+          cat report.md >> $GITHUB_STEP_SUMMARY
+
+      - name: Comentar en el Pull Request
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const reportBody = fs.readFileSync('report.md', 'utf8');
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: reportBody
+            });
